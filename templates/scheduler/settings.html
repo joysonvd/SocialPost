@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - PostPilot{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Settings</h1>
+        <p class="mt-1 text-gray-600">Manage your account and integrations</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div
+            class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- OpenAI API Key Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.6 8.3829l2.02-1.1638a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.1408 1.6465 4.4708 4.4708 0 0 1 .5765 3.0318zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">OpenAI API Key</h2>
+                    <p class="text-sm text-gray-500">Required for AI image generation with DALL-E</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-5">
+            <!-- Current Status -->
+            <div class="mb-6">
+                <div class="flex items-center space-x-2 text-sm">
+                    {% if settings.has_api_key %}
+                    <span class="flex items-center space-x-1 text-green-600">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span class="font-medium">API Key Configured</span>
+                    </span>
+                    {% if masked_key %}
+                    <span class="text-gray-500">• {{ masked_key }}</span>
+                    {% elif has_env_key %}
+                    <span class="text-gray-500">• Using environment variable</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="flex items-center space-x-1 text-amber-600">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span class="font-medium">Not Configured</span>
+                    </span>
+                    <span class="text-gray-500">• Using free Pollinations.ai as fallback</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- API Key Form -->
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_api_key">
+
+                <div>
+                    <label for="openai_api_key" class="block text-sm font-medium text-gray-700 mb-1">
+                        API Key
+                    </label>
+                    <input type="password" id="openai_api_key" name="openai_api_key" placeholder="sk-..."
+                        class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                        autocomplete="off">
+                    <p class="mt-1.5 text-xs text-gray-500">
+                        Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank"
+                            class="text-primary-600 hover:underline">OpenAI Platform</a>
+                    </p>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button type="submit"
+                        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                        Save API Key
+                    </button>
+
+                    {% if masked_key %}
+                    <button type="submit" name="action" value="remove_api_key"
+                        class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
+                        Remove Key
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Help Text -->
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Alternative: Environment Variable</h3>
+                <p class="text-sm text-gray-600 mb-2">
+                    You can also set your API key as an environment variable:
+                </p>
+                <code class="block p-3 bg-gray-800 text-green-400 rounded text-xs font-mono">
+                    export OPENAI_API_KEY="sk-your-api-key-here"
+                </code>
+                <p class="text-xs text-gray-500 mt-2">
+                    The stored key takes priority over the environment variable.
+                </p>
+            </div>
+
+            <!-- Fallback Info -->
+            <div class="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-medium text-amber-900">Fallback Provider</h3>
+                        <p class="text-sm text-amber-700 mt-1">
+                            If no API key is configured, images will be generated using <strong>Pollinations.ai</strong>
+                            (free, unlimited).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Info -->
+    <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd" />
+            </svg>
+            <div>
+                <h3 class="text-sm font-medium text-blue-900">Security</h3>
+                <p class="text-sm text-blue-700 mt-1">
+                    Your API key is encrypted at rest using AES-256 encryption.
+                    It is never logged or exposed in any responses.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load scheduler_tags %}
+
+{% block title %}Calendar - PostPilot{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Calendar</h1>
+            <p class="mt-1 text-gray-600">Click on any date to schedule a post</p>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <!-- View Toggle -->
+            <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                <a href="?view=month{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors
+                          {% if view_mode == 'month' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                    Month
+                </a>
+                <a href="?view=week"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors
+                          {% if view_mode == 'week' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                    Week
+                </a>
+            </div>
+
+            {% if view_mode == 'month' %}
+            <!-- Month Navigation -->
+            <div class="flex items-center space-x-2">
+                <a href="?view=month&year={{ prev_year }}&month={{ prev_month }}"
+                    class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <h2 class="text-xl font-semibold text-gray-900 min-w-[180px] text-center">
+                    {{ month_name }} {{ year }}
+                </h2>
+                <a href="?view=month&year={{ next_year }}&month={{ next_month }}"
+                    class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+            {% else %}
+            <!-- Week Navigation -->
+            <div class="flex items-center space-x-2">
+                <a href="?view=week&week_start={{ prev_week_start }}"
+                    class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <h2 class="text-xl font-semibold text-gray-900 min-w-[220px] text-center">
+                    {{ week_start|date:"M j" }} - {{ week_end|date:"M j, Y" }}
+                </h2>
+                <a href="?view=week&week_start={{ next_week_start }}"
+                    class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if view_mode == 'week' %}
+    <!-- Weekly Calendar Grid -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Week Days Header -->
+        <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+            {% for day_info in week_days %}
+            <div class="py-4 text-center border-r border-gray-200 last:border-r-0">
+                <div class="text-xs font-medium text-gray-500 uppercase">{{ day_info.weekday }}</div>
+                <div class="mt-1 text-lg font-semibold 
+                            {% if day_info.is_today %}text-primary-600{% else %}text-gray-900{% endif %}">
+                    {{ day_info.day }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Week Days Content -->
+        <div class="grid grid-cols-7 min-h-[500px]">
+            {% for day_info in week_days %}
+            <div class="border-r border-gray-100 last:border-r-0 p-2 
+                        {% if day_info.is_today %}bg-primary-50/30{% endif %}
+                        hover:bg-gray-50 transition-colors cursor-pointer calendar-day"
+                hx-get="{% url 'post_create_date' day_info.year day_info.month day_info.day %}"
+                hx-target="#modal-container" hx-swap="innerHTML">
+
+                <!-- Posts for this day -->
+                <div class="space-y-2">
+                    {% with day_info.date as current_date %}
+                    {% for date_key, posts in posts_by_day.items %}
+                    {% if date_key == current_date %}
+                    {% for post in posts %}
+                    <div class="p-3 rounded-lg border-l-4 
+                                {% if post.status == 'published' %}
+                                    bg-green-50 border-green-500
+                                {% elif post.status == 'scheduled' %}
+                                    bg-blue-50 border-blue-500
+                                {% else %}
+                                    bg-gray-50 border-gray-400
+                                {% endif %}">
+                        <div class="text-xs font-medium text-gray-500 mb-1">
+                            {{ post.scheduled_for|time:"g:i A" }}
+                        </div>
+                        <div class="text-sm text-gray-900 line-clamp-2">
+                            {{ post.content|truncatewords:8 }}
+                        </div>
+                        {% if post.status == 'published' %}
+                        <div class="mt-2 flex items-center space-x-3 text-xs text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-3 h-3 mr-1 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                                {{ post.metrics.likes|default:0 }}
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-3 h-3 mr-1 text-blue-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {{ post.metrics.views|default:0 }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% empty %}
+                    <!-- No posts message shown only if truly empty -->
+                    {% endfor %}
+                    {% endwith %}
+                </div>
+
+                <!-- Add post hint on hover -->
+                <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Monthly Calendar Grid -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Weekday Headers -->
+        <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+            {% for day in weekdays %}
+            <div class="py-3 text-center text-sm font-semibold text-gray-600">
+                {{ day }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Calendar Days -->
+        <div class="grid grid-cols-7">
+            {% for week in month_days %}
+            {% for day in week %}
+            {% if day == 0 %}
+            <!-- Empty cell for days outside this month -->
+            <div class="min-h-[120px] bg-gray-50 border-b border-r border-gray-100"></div>
+            {% else %}
+            <!-- Clickable day cell -->
+            <div class="min-h-[120px] border-b border-r border-gray-100 p-2 calendar-day cursor-pointer hover:bg-primary-50 transition-colors relative group"
+                hx-get="{% url 'post_create_date' year month day %}" hx-target="#modal-container" hx-swap="innerHTML">
+
+                <!-- Day Number -->
+                <div class="flex items-center justify-between mb-2">
+                    <span class="inline-flex items-center justify-center w-7 h-7 text-sm font-medium rounded-full
+                                {% if day == today.day and month == today.month and year == today.year %}
+                                    bg-primary-600 text-white
+                                {% else %}
+                                    text-gray-700 group-hover:bg-primary-100
+                                {% endif %}">
+                        {{ day }}
+                    </span>
+
+                    <!-- Add button appears on hover -->
+                    <span class="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </span>
+                </div>
+
+                <!-- Posts for this day -->
+                {% if day in posts_by_day %}
+                <div class="space-y-1">
+                    {% for post in posts_by_day|get_item:day %}
+                    {% if forloop.counter <= 3 %} <div class="text-xs truncate px-2 py-1 rounded 
+                                {% if post.status == 'published' %}
+                                    bg-green-100 text-green-700
+                                {% elif post.status == 'scheduled' %}
+                                    bg-blue-100 text-blue-700
+                                {% else %}
+                                    bg-gray-100 text-gray-700
+                                {% endif %}">
+                        {{ post.content|truncatewords:3 }}
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% with posts_by_day|get_item:day as day_posts %}
+                {% if day_posts|length > 3 %}
+                <div class="text-xs text-gray-500 px-2">
+                    +{{ day_posts|length|add:"-3" }} more
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Legend -->
+<div class="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
+    <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded bg-green-100 border border-green-300"></span>
+        <span>Published</span>
+    </div>
+    <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span>
+        <span>Scheduled</span>
+    </div>
+    <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 rounded bg-gray-100 border border-gray-300"></span>
+        <span>Draft</span>
+    </div>
+</div>
+</div>
+{% endblock %}

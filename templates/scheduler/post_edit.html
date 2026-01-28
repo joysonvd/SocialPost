@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Post - PostPilot{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'post_detail' post.pk %}"
+            class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Post
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900">Edit Post</h1>
+        <p class="mt-1 text-gray-600">Update your scheduled post</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div
+            class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Edit Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <form method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Content -->
+            <div>
+                <label for="id_content" class="block text-sm font-medium text-gray-700 mb-2">
+                    Post Content
+                </label>
+                <textarea name="content" id="id_content" rows="5"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none"
+                    placeholder="What do you want to share?">{{ form.content.value|default:'' }}</textarea>
+                {% if form.content.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.content.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Platform -->
+            <div>
+                <label for="id_platform" class="block text-sm font-medium text-gray-700 mb-2">
+                    Platform
+                </label>
+                <select name="platform" id="id_platform"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    <option value="twitter" {% if post.platform=='twitter' %}selected{% endif %}>Twitter/X</option>
+                    <option value="instagram" {% if post.platform=='instagram' %}selected{% endif %}>Instagram</option>
+                    <option value="facebook" {% if post.platform=='facebook' %}selected{% endif %}>Facebook</option>
+                    <option value="linkedin" {% if post.platform=='linkedin' %}selected{% endif %}>LinkedIn</option>
+                    <option value="tiktok" {% if post.platform=='tiktok' %}selected{% endif %}>TikTok</option>
+                </select>
+            </div>
+
+            <!-- Scheduled For -->
+            <div>
+                <label for="id_scheduled_for" class="block text-sm font-medium text-gray-700 mb-2">
+                    Schedule For
+                </label>
+                <input type="datetime-local" name="scheduled_for" id="id_scheduled_for"
+                    value="{{ form.scheduled_for.value|default:'' }}"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                {% if form.scheduled_for.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.scheduled_for.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Current Image -->
+            {% if post.image %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Current Image</label>
+                <div class="relative inline-block">
+                    <img src="{{ post.image.url }}" alt=""
+                        class="w-48 h-48 object-cover rounded-lg border border-gray-200">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- New Image -->
+            <div>
+                <label for="id_image" class="block text-sm font-medium text-gray-700 mb-2">
+                    {% if post.image %}Replace Image{% else %}Add Image{% endif %}
+                </label>
+                <input type="file" name="image" id="id_image" accept="image/*"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+            </div>
+
+            <!-- AI Image Generation -->
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Generate Image with AI
+                </label>
+                <div class="flex space-x-2">
+                    <input type="text" id="ai-prompt"
+                        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                        placeholder="Describe the image you want...">
+                    <button type="button" id="generate-btn"
+                        class="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all font-medium flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Generate</span>
+                    </button>
+                </div>
+                <div id="ai-preview" class="mt-4 hidden">
+                    <img id="ai-preview-img" src="" alt=""
+                        class="w-48 h-48 object-cover rounded-lg border border-gray-200">
+                    <input type="hidden" name="ai_image_url" id="ai-image-url">
+                </div>
+                <div id="ai-loading" class="mt-4 hidden">
+                    <div class="flex items-center space-x-2 text-gray-600">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span>Generating image...</span>
+                    </div>
+                </div>
+                <div id="ai-error" class="mt-2 text-sm text-red-600 hidden"></div>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <div class="flex items-center space-x-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                        {% if post.status == 'published' %}bg-green-100 text-green-800
+                        {% elif post.status == 'scheduled' %}bg-blue-100 text-blue-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ post.get_status_display }}
+                    </span>
+                    {% if post.status == 'published' %}
+                    <span class="text-sm text-gray-500">Published posts cannot be edited</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+                <a href="{% url 'post_detail' post.pk %}"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                    class="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const generateBtn = document.getElementById('generate-btn');
+        const promptInput = document.getElementById('ai-prompt');
+        const previewDiv = document.getElementById('ai-preview');
+        const previewImg = document.getElementById('ai-preview-img');
+        const imageUrlInput = document.getElementById('ai-image-url');
+        const loadingDiv = document.getElementById('ai-loading');
+        const errorDiv = document.getElementById('ai-error');
+
+        generateBtn.addEventListener('click', async function () {
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                errorDiv.textContent = 'Please enter a prompt';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Show loading
+            loadingDiv.classList.remove('hidden');
+            previewDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('prompt', prompt);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                const response = await fetch('{% url "generate_ai_image" %}', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    previewImg.src = data.image_url;
+                    imageUrlInput.value = data.image_url;
+                    previewDiv.classList.remove('hidden');
+                    errorDiv.classList.add('hidden');
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to generate image';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error generating image. Please try again.';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

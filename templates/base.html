@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Media Scheduler{% endblock %}</title>
+    <meta name="description" content="Schedule and manage your social media posts with ease">
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX via CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Custom Styles -->
+    <style>
+        /* Smooth modal transitions */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Loading spinner */
+        .htmx-indicator {
+            display: none;
+        }
+
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+        }
+
+        .htmx-request.htmx-indicator {
+            display: inline-block;
+        }
+
+        /* Calendar day hover */
+        .calendar-day:hover {
+            transform: scale(1.02);
+            transition: transform 0.15s ease;
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-gray-50">
+    {% if user.is_authenticated %}
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <!-- Logo -->
+                    <a href="{% url 'dashboard' %}" class="flex items-center space-x-2">
+                        <div
+                            class="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold gradient-text">PostPilot</span>
+                    </a>
+
+                    <!-- Nav Links -->
+                    <div class="hidden sm:ml-8 sm:flex sm:space-x-4">
+                        <a href="{% url 'dashboard' %}"
+                            class="{% if request.resolver_match.url_name == 'dashboard' %}bg-primary-50 text-primary-700{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %} px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Dashboard
+                        </a>
+                        <a href="{% url 'calendar' %}"
+                            class="{% if request.resolver_match.url_name == 'calendar' %}bg-primary-50 text-primary-700{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %} px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Calendar
+                        </a>
+                        <a href="{% url 'settings' %}"
+                            class="{% if request.resolver_match.url_name == 'settings' %}bg-primary-50 text-primary-700{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %} px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Settings
+                        </a>
+                    </div>
+                </div>
+
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        Welcome, <span class="font-medium text-gray-900">{{ user.username }}</span>
+                    </span>
+                    <a href="{% url 'logout' %}"
+                        class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="{% if user.is_authenticated %}py-8{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Modal Container (for HTMX) -->
+    <div id="modal-container"></div>
+
+    <!-- Toast Messages -->
+    {% if messages %}
+    <div class="fixed bottom-4 right-4 z-50 space-y-2">
+        {% for message in messages %}
+        <div
+            class="bg-white rounded-lg shadow-lg border px-4 py-3 flex items-center space-x-3 animate-slide-in
+                    {% if message.tags == 'success' %}border-green-200{% elif message.tags == 'error' %}border-red-200{% else %}border-gray-200{% endif %}">
+            {% if message.tags == 'success' %}
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            {% elif message.tags == 'error' %}
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            {% endif %}
+            <span class="text-sm text-gray-700">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- HTMX Configuration -->
+    <script>
+        document.body.addEventListener('htmx:afterSwap', function (evt) {
+            // Handle modal opening
+            if (evt.detail.target.id === 'modal-container') {
+                document.body.classList.add('overflow-hidden');
+            }
+        });
+
+        // Close modal function
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function (evt) {
+            if (evt.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

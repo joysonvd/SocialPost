@@ -1,0 +1,293 @@
+<!-- Post Creation Modal (HTMX Partial) -->
+<div class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 modal-backdrop" onclick="closeModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative bg-white rounded-2xl shadow-xl max-w-lg w-full transform transition-all">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    Schedule New Post
+                    {% if year and month and day %}
+                    <span class="text-sm font-normal text-gray-500 ml-2">
+                        for {{ month }}/{{ day }}/{{ year }}
+                    </span>
+                    {% endif %}
+                </h3>
+                <button onclick="closeModal()" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form method="post" enctype="multipart/form-data"
+                hx-post="{% if year and month and day %}{% url 'post_create_date' year month day %}{% else %}{% url 'post_create' %}{% endif %}"
+                hx-target="#modal-container" class="p-6 space-y-6">
+                {% csrf_token %}
+
+                <!-- Content -->
+                <div>
+                    <label for="id_content" class="block text-sm font-medium text-gray-700 mb-2">
+                        Post Content
+                    </label>
+                    {{ form.content }}
+                    <p class="mt-1 text-xs text-gray-500">Write your post content here</p>
+                </div>
+
+                <!-- Platform -->
+                <div>
+                    <label for="id_platform" class="block text-sm font-medium text-gray-700 mb-2">
+                        Platform
+                    </label>
+                    <select name="platform" id="id_platform"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <option value="twitter" selected>Twitter/X</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="tiktok">TikTok</option>
+                    </select>
+                </div>
+
+                <!-- Image Upload & AI Generation -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Image
+                    </label>
+
+                    <!-- Preview container -->
+                    <div id="image-preview-container" class="hidden mb-3 relative">
+                        <img id="image-preview" src="" alt="Preview"
+                            class="w-full h-48 object-cover rounded-lg border border-gray-200">
+                        <button type="button" onclick="clearImagePreview()"
+                            class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- AI Prompt Input -->
+                    <div class="mb-3">
+                        <label for="ai-prompt" class="block text-xs font-medium text-gray-600 mb-1">
+                            AI Image Prompt
+                        </label>
+                        <div class="flex items-stretch space-x-2">
+                            <input type="text" id="ai-prompt" placeholder="Describe the image you want to generate..."
+                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            <button type="button" id="generate-ai-btn" onclick="generateAIImage()"
+                                class="inline-flex items-center px-4 py-2 border border-primary-300 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors whitespace-nowrap">
+                                <svg id="ai-icon" class="w-4 h-4 mr-2" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                                <svg id="ai-spinner" class="hidden animate-spin w-4 h-4 mr-2" fill="none"
+                                    viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span id="ai-btn-text">Generate</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error message container -->
+                    <div id="ai-error"
+                        class="hidden mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+
+                    <!-- Hidden input for generated image URL -->
+                    <input type="hidden" id="generated-image-url" name="generated_image_url" value="">
+
+                    <!-- File Input -->
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-1">
+                            {{ form.image }}
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">
+                        Enter a prompt and click Generate, or upload your own image
+                    </p>
+                </div>
+
+                <!-- Schedule DateTime -->
+                <div>
+                    <label for="id_scheduled_for" class="block text-sm font-medium text-gray-700 mb-2">
+                        Schedule For
+                    </label>
+                    {{ form.scheduled_for }}
+                    <!-- Past date warning -->
+                    <div id="past-date-warning" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div class="flex items-start space-x-2">
+                            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-amber-800">Scheduling in the past</p>
+                                <p class="text-xs text-amber-700 mt-0.5">This post will be published immediately when
+                                    the scheduler runs.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg hover:from-primary-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all">
+                        Schedule Post
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview uploaded image
+    document.getElementById('id_image').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('image-preview').src = e.target.result;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+                document.getElementById('generated-image-url').value = ''; // Clear generated URL
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Clear image preview
+    function clearImagePreview() {
+        document.getElementById('image-preview').src = '';
+        document.getElementById('image-preview-container').classList.add('hidden');
+        document.getElementById('id_image').value = '';
+        document.getElementById('generated-image-url').value = '';
+    }
+
+    // Generate AI Image with DALL-E
+    async function generateAIImage() {
+        const btn = document.getElementById('generate-ai-btn');
+        const icon = document.getElementById('ai-icon');
+        const spinner = document.getElementById('ai-spinner');
+        const btnText = document.getElementById('ai-btn-text');
+        const promptInput = document.getElementById('ai-prompt');
+        const errorDiv = document.getElementById('ai-error');
+
+        const prompt = promptInput.value.trim();
+
+        // Validate prompt
+        if (!prompt) {
+            errorDiv.textContent = 'Please enter a prompt for the image';
+            errorDiv.classList.remove('hidden');
+            promptInput.focus();
+            return;
+        }
+
+        // Hide any previous error
+        errorDiv.classList.add('hidden');
+
+        // Show loading state
+        btn.disabled = true;
+        icon.classList.add('hidden');
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Generating...';
+
+        try {
+            const response = await fetch('{% url "generate_ai_image" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'prompt=' + encodeURIComponent(prompt)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Show the generated image
+                document.getElementById('image-preview').src = data.image_url;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+                document.getElementById('generated-image-url').value = data.image_url;
+                btnText.textContent = 'Generated!';
+
+                // Reset button after delay
+                setTimeout(() => {
+                    btn.disabled = false;
+                    icon.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Generate';
+                }, 2000);
+            } else {
+                // Show error
+                errorDiv.textContent = data.error || 'Failed to generate image';
+                errorDiv.classList.remove('hidden');
+
+                // Reset button immediately on error
+                btn.disabled = false;
+                icon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                btnText.textContent = 'Generate';
+            }
+        } catch (error) {
+            console.error('Error generating image:', error);
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('hidden');
+
+            btn.disabled = false;
+            icon.classList.remove('hidden');
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Generate';
+        }
+    }
+
+    // Allow enter key to trigger generation
+    document.getElementById('ai-prompt').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            generateAIImage();
+        }
+    });
+
+    // Past date warning
+    function checkPastDate() {
+        const input = document.getElementById('id_scheduled_for');
+        const warning = document.getElementById('past-date-warning');
+
+        if (input && warning && input.value) {
+            const selectedDate = new Date(input.value);
+            const now = new Date();
+
+            if (selectedDate < now) {
+                warning.classList.remove('hidden');
+            } else {
+                warning.classList.add('hidden');
+            }
+        }
+    }
+
+    // Check on page load and on change
+    const scheduledInput = document.getElementById('id_scheduled_for');
+    if (scheduledInput) {
+        scheduledInput.addEventListener('change', checkPastDate);
+        checkPastDate(); // Check initial value
+    }
+</script>
