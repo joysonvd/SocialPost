@@ -9,12 +9,31 @@
 
 ## ✨ Features
 
-- **📊 Dashboard Analytics** - Track total posts, likes, views, and engagement metrics
+### Core Features
+- **📊 Dashboard Analytics** - Track impressions, likes, comments, clicks, and engagement rate
 - **🗓️ Visual Calendar** - Monthly calendar view with clickable dates for easy scheduling  
-- **🤖 AI Image Generation** - Mock integration ready for OpenAI DALL-E (swap in your API key)
 - **⚡ HTMX Modals** - Smooth, no-refresh post creation experience
 - **🔐 Multi-tenant** - Each user only sees their own data
 - **📱 Responsive Design** - Works beautifully on desktop and mobile
+
+### AI Image Generation
+- **🤖 OpenAI DALL-E Integration** - Generate images with your API key
+- **🆓 Pollinations.ai Fallback** - Free, unlimited image generation when no API key configured
+- **🔄 Automatic Provider Switching** - Seamlessly falls back if primary fails
+
+### Post Management
+- **📝 Create, Edit, Delete Posts** - Full CRUD operations
+- **🎯 Multi-Platform Support** - Twitter/X, Instagram, Facebook, LinkedIn, TikTok
+- **⏰ Past Date Warning** - Alerts when scheduling posts in the past
+- **🏆 Best Performing Post** - Highlights your top content on dashboard
+
+### Analytics & Metrics
+- **�️ Impressions** - Total times your posts were seen
+- **❤️ Likes** - Total likes across all posts
+- **💬 Comments** - Total comments received
+- **🖱️ Clicks** - Total link clicks
+- **📈 Engagement Rate** - Calculated as `(Likes + Comments + Clicks) / Impressions × 100`
+- **⭐ Engagement Score** - Weighted formula: `Impressions×0.5 + Clicks×1 + Likes×1 + Comments×2`
 
 ---
 
@@ -28,11 +47,12 @@
 
 ```bash
 # Clone the repository
-cd /path/to/miniSaas
+git clone git@github.com:joysonvd/SocialPost.git
+cd SocialPost
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -40,7 +60,7 @@ pip install -r requirements.txt
 # Run migrations
 python manage.py migrate
 
-# Create a superuser (optional, for admin access)
+# Create a superuser (optional)
 python manage.py createsuperuser
 
 # Start the development server
@@ -49,9 +69,52 @@ python manage.py runserver
 
 Visit **http://127.0.0.1:8000** and create your account!
 
+### Test User
+- **Username:** `testuser`
+- **Password:** `TestPass123!`
+
 ---
 
-## 🏗️ Architecture Overview
+## 🔌 AI Image Generation
+
+PostPilot supports two image generation providers:
+
+### Option 1: OpenAI DALL-E (Paid)
+1. Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Add it in Settings page, or set environment variable:
+   ```bash
+   export OPENAI_API_KEY="sk-your-api-key"
+   ```
+
+### Option 2: Pollinations.ai (Free)
+- **No API key required**
+- Automatically used when no OpenAI key is configured
+- Free and unlimited image generation
+
+> 💡 The app automatically detects which provider to use and tells you in the success message!
+
+---
+
+## 📊 Performance
+
+Profiled on local development server:
+
+| Endpoint | Response Time |
+|----------|---------------|
+| Dashboard | ~3ms |
+| Calendar | ~3ms |
+| Settings | ~22ms |
+| Login | ~55ms |
+| AI Image Generation | ~1.5s (external API) |
+
+Run the profiler yourself:
+```bash
+python profile_api.py
+```
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -70,7 +133,8 @@ Visit **http://127.0.0.1:8000** and create your account!
 │                           ▼                                  │
 │   ┌─────────────────────────────────────────────────────┐   │
 │   │                    Models                            │   │
-│   │     User (Django Auth)  ←──FK──  Post               │   │
+│   │   User ←──FK── Post (with Platform & Metrics)       │   │
+│   │   User ←──FK── UserSettings (encrypted API keys)    │   │
 │   └─────────────────────────────────────────────────────┘   │
 └─────────────────────┬───────────────────────────────────────┘
                       │
@@ -86,9 +150,10 @@ Visit **http://127.0.0.1:8000** and create your account!
 ## 📁 Project Structure
 
 ```
-miniSaas/
+SocialPost/
 ├── manage.py                 # Django management script
 ├── requirements.txt          # Python dependencies
+├── profile_api.py           # API performance profiler
 ├── db.sqlite3               # SQLite database (auto-created)
 │
 ├── core/                    # Project configuration
@@ -97,8 +162,8 @@ miniSaas/
 │   └── wsgi.py              # WSGI application
 │
 ├── scheduler/               # Main application
-│   ├── models.py            # Post model
-│   ├── views.py             # Dashboard, Calendar, Post views
+│   ├── models.py            # Post, UserSettings models
+│   ├── views.py             # Dashboard, Calendar, Post, Settings views
 │   ├── forms.py             # PostForm
 │   ├── urls.py              # App routes
 │   ├── admin.py             # Admin configuration
@@ -111,75 +176,98 @@ miniSaas/
 │   ├── base.html            # Base layout
 │   ├── registration/        # Login/Register
 │   └── scheduler/           # App templates
+│       ├── dashboard.html
+│       ├── calendar.html
+│       ├── settings.html
+│       ├── post_detail.html
+│       ├── post_edit.html
+│       └── partials/
+│           └── post_modal.html
 │
-├── static/                  # Static files
-└── media/                   # User uploads
+└── media/                   # User uploads (post images)
 ```
 
 ---
 
-## 🔧 Key Components
+## 🔧 Key Models
 
 ### Post Model
 
 ```python
 class Post(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User)
     content = models.TextField()
     image = models.ImageField(upload_to='post_images/', blank=True)
     scheduled_for = models.DateTimeField()
     status = models.CharField(choices=['draft', 'scheduled', 'published'])
-    metrics = models.JSONField(default=dict)  # {"likes": 0, "views": 0}
+    platform = models.CharField(choices=['twitter', 'instagram', 'facebook', 'linkedin', 'tiktok'])
+    metrics = models.JSONField()  # {"impressions": 0, "likes": 0, "comments": 0, "clicks": 0}
 ```
 
-### Scheduler Command
+### UserSettings Model
+
+```python
+class UserSettings(models.Model):
+    user = models.OneToOneField(User)
+    gemini_api_key_encrypted = models.BinaryField()  # AES-256 encrypted
+    
+    def get_api_key(self):  # Decrypts and returns key
+    def set_api_key(self, key):  # Encrypts and stores key
+```
+
+---
+
+## 🗓️ Scheduler
+
+Process scheduled posts and generate mock engagement metrics:
 
 ```bash
-# Process scheduled posts and generate mock metrics
+# Run the scheduler
 python manage.py run_scheduler
 
 # Preview without making changes
 python manage.py run_scheduler --dry-run
 ```
 
+The scheduler:
+1. Finds all posts with `status=scheduled` and `scheduled_for <= now`
+2. Updates status to `published`
+3. Generates mock engagement metrics (impressions, likes, comments, clicks)
+
 ---
 
 ## 🎨 Design Decisions
 
-### Why Django + HTMX?
-
-| Approach | Pros | Why We Chose It |
-|----------|------|-----------------|
-| **Django SSR** | Simple, fast development, no build step | Perfect for MVP timeline |
-| **HTMX** | Interactive UX without React/Vue complexity | Modals work beautifully |
-| **Tailwind CDN** | No webpack/vite needed, instant styling | Rapid prototyping |
-| **SQLite** | Zero config, file-based, portable | Great for demos |
-
-### Multi-Tenancy Strategy
-
-- Every `Post` has a `user` ForeignKey
-- All views filter by `request.user`
-- `@login_required` on every protected view
-- No user can ever see another user's data
+| Choice | Why |
+|--------|-----|
+| **Django SSR** | Simple, fast development, no build step |
+| **HTMX** | Interactive UX without React/Vue complexity |
+| **Tailwind CDN** | No webpack/vite needed, instant styling |
+| **SQLite** | Zero config, file-based, portable |
+| **Fernet Encryption** | API keys encrypted at rest |
+| **Pollinations.ai Fallback** | Free option for users without API keys |
 
 ---
 
-## 🔌 AI Image Generation
+## � Security
 
-The MVP includes a **mocked** AI image endpoint. To enable real generation:
+- **Encrypted API Keys** - Stored using AES-256 (Fernet) encryption
+- **CSRF Protection** - Django's built-in CSRF middleware
+- **Login Required** - All views protected with `@login_required`
+- **Multi-Tenant Isolation** - Users can only see their own data
 
-1. Add to `settings.py`:
-   ```python
-   OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-   ```
+---
 
-2. Update `views.py` `generate_ai_image()`:
-   ```python
-   import openai
-   openai.api_key = settings.OPENAI_API_KEY
-   response = openai.Image.create(prompt=prompt, n=1, size="512x512")
-   image_url = response['data'][0]['url']
-   ```
+## 📦 Dependencies
+
+```
+Django>=4.2,<5.0
+Pillow>=9.0.0
+openai>=1.0.0
+google-genai>=1.0.0
+cryptography>=41.0.0
+requests>=2.31.0
+```
 
 ---
 
@@ -191,6 +279,9 @@ python manage.py test scheduler
 
 # Run with verbose output
 python manage.py test scheduler -v 2
+
+# Profile API performance
+python profile_api.py
 ```
 
 ---
