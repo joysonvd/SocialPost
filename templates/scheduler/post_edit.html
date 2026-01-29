@@ -54,12 +54,13 @@
                 </label>
                 <select name="platform" id="id_platform"
                     class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
-                    <option value="twitter" {% if post.platform=='twitter' %}selected{% endif %}>Twitter/X</option>
-                    <option value="instagram" {% if post.platform=='instagram' %}selected{% endif %}>Instagram</option>
-                    <option value="facebook" {% if post.platform=='facebook' %}selected{% endif %}>Facebook</option>
-                    <option value="linkedin" {% if post.platform=='linkedin' %}selected{% endif %}>LinkedIn</option>
-                    <option value="tiktok" {% if post.platform=='tiktok' %}selected{% endif %}>TikTok</option>
+                    <option value="twitter">Twitter/X</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="tiktok">TikTok</option>
                 </select>
+                <input type="hidden" id="current-platform" value="{{ post.platform }}">
             </div>
 
             <!-- Scheduled For -->
@@ -217,6 +218,13 @@
                 generateBtn.disabled = false;
             }
         });
+
+        // Set platform dropdown to current value
+        const currentPlatform = document.getElementById('current-platform');
+        const platformSelect = document.getElementById('id_platform');
+        if (currentPlatform && platformSelect && currentPlatform.value) {
+            platformSelect.value = currentPlatform.value;
+        }
     });
 </script>
 {% endblock %}

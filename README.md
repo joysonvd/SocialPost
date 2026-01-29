@@ -249,7 +249,60 @@ The scheduler:
 
 ---
 
-## � Security
+## 🐘 Switching to PostgreSQL
+
+By default, PostPilot uses SQLite for simplicity. To switch to PostgreSQL for production:
+
+### 1. Install PostgreSQL adapter
+
+```bash
+pip install psycopg2-binary
+```
+
+### 2. Update `core/settings.py`
+
+Replace the `DATABASES` configuration:
+
+```python
+# Database - PostgreSQL
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'postpilot'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
+```
+
+### 3. Create the database
+
+```bash
+psql -U postgres -c "CREATE DATABASE postpilot;"
+```
+
+### 4. Run migrations
+
+```bash
+python manage.py migrate
+```
+
+### Migrating existing data (optional)
+
+```bash
+# Export from SQLite
+python manage.py dumpdata > data.json
+
+# Switch settings to PostgreSQL, then:
+python manage.py migrate
+python manage.py loaddata data.json
+```
+
+---
+
+## 🔐 Security
 
 - **Encrypted API Keys** - Stored using AES-256 (Fernet) encryption
 - **CSRF Protection** - Django's built-in CSRF middleware
@@ -286,12 +339,14 @@ python profile_api.py
 
 ---
 
-## 📝 License
+## � Future Improvements
 
-MIT License - Feel free to use this for your own projects!
+1. **PostgreSQL Migration** - Move from SQLite to PostgreSQL for production scalability
+2. **Team-based Multitenancy** - Currently multitenancy is user-based; add team-level access where multiple users can view and manage shared team data
+3. **Real Social API Integration** - Integrate actual social media APIs (Twitter, Instagram, etc.) to replace simulated metrics with real engagement data
+4. **UTC Datetime Handling** - Store and process all datetimes in UTC instead of local time for consistency across timezones
+5. **Celery Task Queue** - Replace the current cron-based scheduler with Celery for more robust background job processing
+6. **AWS Secrets Manager** - Use AWS Secrets Manager (or similar) for API key storage instead of database encryption
+7. **Team Approval Workflow** - Add a content approval workflow where team owners can review and approve posts before publishing
 
 ---
-
-<div align="center">
-  <p>Built with ❤️ using Django, HTMX, and Tailwind CSS</p>
-</div>

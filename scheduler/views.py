@@ -283,6 +283,34 @@ def post_modal(request, year=None, month=None, day=None):
             post = form.save(commit=False)
             post.user = request.user
             post.status = Post.Status.SCHEDULED
+            
+            # Handle AI-generated image if provided
+            generated_image_url = request.POST.get('generated_image_url', '')
+            if generated_image_url and not request.FILES.get('image'):
+                try:
+                    import os
+                    from django.conf import settings
+                    from django.core.files.base import ContentFile
+                    
+                    # Check if it's a local media URL
+                    if generated_image_url.startswith('/media/'):
+                        # It's a local file, copy it
+                        relative_path = generated_image_url.replace('/media/', '', 1)
+                        source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+                        if os.path.exists(source_path):
+                            with open(source_path, 'rb') as f:
+                                post.image.save(os.path.basename(source_path), ContentFile(f.read()), save=False)
+                    else:
+                        # It's a remote URL, download it
+                        import requests
+                        import uuid
+                        resp = requests.get(generated_image_url, timeout=30)
+                        if resp.status_code == 200:
+                            filename = f"ai_generated_{uuid.uuid4().hex[:8]}.png"
+                            post.image.save(filename, ContentFile(resp.content), save=False)
+                except Exception as e:
+                    print(f"Failed to save AI image: {e}")
+            
             post.save()
             
             # Return success response that closes modal and refreshes calendar
@@ -431,7 +459,36 @@ def post_edit(request, pk):
     if request.method == 'POST':
         form = PostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
-            form.save()
+            updated_post = form.save(commit=False)
+            
+            # Handle AI-generated image if provided
+            ai_image_url = request.POST.get('ai_image_url', '')
+            if ai_image_url and not request.FILES.get('image'):
+                try:
+                    import os
+                    from django.conf import settings
+                    from django.core.files.base import ContentFile
+                    
+                    # Check if it's a local media URL
+                    if ai_image_url.startswith('/media/'):
+                        # It's a local file, copy it
+                        relative_path = ai_image_url.replace('/media/', '', 1)
+                        source_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+                        if os.path.exists(source_path):
+                            with open(source_path, 'rb') as f:
+                                updated_post.image.save(os.path.basename(source_path), ContentFile(f.read()), save=False)
+                    else:
+                        # It's a remote URL, download it
+                        import requests as req
+                        import uuid
+                        response = req.get(ai_image_url, timeout=30)
+                        if response.status_code == 200:
+                            filename = f"ai_generated_{uuid.uuid4().hex[:8]}.png"
+                            updated_post.image.save(filename, ContentFile(response.content), save=False)
+                except Exception as e:
+                    print(f"Failed to save AI image: {e}")
+            
+            updated_post.save()
             messages.success(request, 'Post updated successfully!')
             return redirect('post_detail', pk=post.pk)
     else:
