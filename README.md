@@ -348,5 +348,6 @@ python profile_api.py
 5. **Celery Task Queue** - Replace the current cron-based scheduler with Celery for more robust background job processing
 6. **AWS Secrets Manager** - Use AWS Secrets Manager (or similar) for API key storage instead of database encryption
 7. **Team Approval Workflow** - Add a content approval workflow where team owners can review and approve posts before publishing
+8. **Image Storage** - Use AWS S3 for image storage instead of local storage
 
 ---
