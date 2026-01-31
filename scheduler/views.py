@@ -10,7 +10,7 @@ import calendar
 import time
 import random
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
@@ -168,8 +168,8 @@ def calendar_view(request):
             })
         
         # Get posts for this week
-        week_start_dt = datetime.combine(week_start, datetime.min.time()).replace(tzinfo=timezone.utc)
-        week_end_dt = datetime.combine(week_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
+        week_start_dt = datetime.combine(week_start, datetime.min.time()).replace(tzinfo=dt_timezone.utc)
+        week_end_dt = datetime.combine(week_end + timedelta(days=1), datetime.min.time()).replace(tzinfo=dt_timezone.utc)
         
         posts = Post.objects.filter(
             user=request.user,
@@ -210,11 +210,11 @@ def calendar_view(request):
         month_days = cal.monthdayscalendar(year, month)
         
         # Get posts for this month, scoped to user
-        first_day = datetime(year, month, 1, tzinfo=timezone.utc)
+        first_day = datetime(year, month, 1, tzinfo=dt_timezone.utc)
         if month == 12:
-            last_day = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            last_day = datetime(year + 1, 1, 1, tzinfo=dt_timezone.utc)
         else:
-            last_day = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+            last_day = datetime(year, month + 1, 1, tzinfo=dt_timezone.utc)
         
         posts = Post.objects.filter(
             user=request.user,
